@@ -29,10 +29,11 @@ from .util import *
 
 
 class UTXOList(MyTreeWidget):
+    headers = [ _('Address'), _('Label'), _('Amount'), _('Height'), _('Output point')]
     filter_columns = [0, 2]  # Address, Label
 
     def __init__(self, parent=None):
-        MyTreeWidget.__init__(self, parent, self.create_menu, [ _('Address'), _('Label'), _('Amount'), _('Height'), _('Output point')], 1)
+        MyTreeWidget.__init__(self, parent, self.create_menu, self.__class__.headers, 1)
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setSortingEnabled(True)
 
