@@ -42,57 +42,54 @@ class UNOList(UTXOList):
     filter_columns = [0, 1]  # Name, Value
 
     def update(self):
-        self.wallet = self.parent.wallet
         self.network = self.parent.network
-        utxos = self.wallet.get_utxos()
-        self.utxo_dict = {}
-        self.model().clear()
-        self.update_headers(self.__class__.headers)
-        for idx, x in enumerate(utxos):
-            txid = x.get('prevout_hash')
-            vout = x.get('prevout_n')
-            name_op = self.wallet.transactions[txid].outputs()[vout].name_op
-            if name_op is None:
-                continue
+        super().update()
 
-            # TODO: Support name_new
-            if 'name' in name_op:
-                name = name_op['name']
-                formatted_name = format_name_identifier(name)
-                value = name_op['value']
-                formatted_value = format_name_value(value)
-            else:
-                name = None
-                formatted_name = ''
-                value = None
-                formatted_value = ''
+    def insert_utxo(self, idx, x):
+        txid = x.get('prevout_hash')
+        vout = x.get('prevout_n')
+        name_op = self.wallet.transactions[txid].outputs()[vout].name_op
+        if name_op is None:
+            return
 
-            height = x.get('height')
-            chain_height = self.network.blockchain().height()
-            expires_in = name_expires_in(height, chain_height)
-            formatted_expires_in = '%d'%expires_in if expires_in is not None else ''
+        # TODO: Support name_new
+        if 'name' in name_op:
+            name = name_op['name']
+            formatted_name = format_name_identifier(name)
+            value = name_op['value']
+            formatted_value = format_name_value(value)
+        else:
+            name = None
+            formatted_name = ''
+            value = None
+            formatted_value = ''
 
-            status = '' if expires_in is not None else _('Update Pending')
+        height = x.get('height')
+        chain_height = self.network.blockchain().height()
+        expires_in = name_expires_in(height, chain_height)
+        formatted_expires_in = '%d'%expires_in if expires_in is not None else ''
 
-            txout = txid + ":%d"%vout
+        status = '' if expires_in is not None else _('Update Pending')
 
-            self.utxo_dict[txout] = x
+        txout = txid + ":%d"%vout
 
-            labels = [formatted_name, formatted_value, formatted_expires_in, status]
-            utxo_item = [QStandardItem(x) for x in labels]
-            self.set_editability(utxo_item)
+        self.utxo_dict[txout] = x
 
-            utxo_item[0].setFont(QFont(MONOSPACE_FONT))
-            utxo_item[1].setFont(QFont(MONOSPACE_FONT))
+        labels = [formatted_name, formatted_value, formatted_expires_in, status]
+        utxo_item = [QStandardItem(x) for x in labels]
+        self.set_editability(utxo_item)
 
-            utxo_item[0].setData(txout, Qt.UserRole)
-            utxo_item[0].setData(name, Qt.UserRole + USER_ROLE_NAME)
-            utxo_item[0].setData(value, Qt.UserRole + USER_ROLE_VALUE)
+        utxo_item[0].setFont(QFont(MONOSPACE_FONT))
+        utxo_item[1].setFont(QFont(MONOSPACE_FONT))
 
-            address = x.get('address')
-            if self.wallet.is_frozen(address):
-                utxo_item[0].setBackground(ColorScheme.BLUE.as_color(True))
-            self.model().appendRow(utxo_item)
+        utxo_item[0].setData(txout, Qt.UserRole)
+        utxo_item[0].setData(name, Qt.UserRole + USER_ROLE_NAME)
+        utxo_item[0].setData(value, Qt.UserRole + USER_ROLE_VALUE)
+
+        address = x.get('address')
+        if self.wallet.is_frozen(address):
+            utxo_item[0].setBackground(ColorScheme.BLUE.as_color(True))
+        self.model().appendRow(utxo_item)
 
     def create_menu(self, position):
         selected = self.selected_column_0_user_roles()
