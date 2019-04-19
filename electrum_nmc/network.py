@@ -287,7 +287,9 @@ class Network(PrintError):
         self.interfaces_name_show = {}  # type: Dict[str, Interface]
         self.auto_connect = self.config.get('auto_connect', True)
         self.connecting = set()
+        self.connecting_name_show = set()
         self.server_queue = None
+        self.server_queue_name_show = None
         self.proxy = None
 
         # Dump network messages (all interfaces).  Set at runtime from the console.
@@ -506,12 +508,25 @@ class Network(PrintError):
             self.connecting.add(server)
             self.server_queue.put(server)
 
+    def _start_interface_name_show(self, server: str):
+        if server not in self.interfaces_name_show and server not in self.connecting_name_show:
+            self.connecting_name_show.add(server)
+            self.server_queue_name_show.put(server)
+
     def _start_random_interface(self):
         with self.interfaces_lock:
             exclude_set = self.disconnected_servers | set(self.interfaces) | self.connecting
         server = pick_random_server(self.get_servers(), self.protocol, exclude_set)
         if server:
             self._start_interface(server)
+        return server
+
+    def _start_random_interface_name_show(self):
+        with self.interfaces_lock:
+            exclude_set = self.disconnected_servers_name_show | set(self.interfaces_name_show) | self.connecting_name_show
+        server = pick_random_server(self.get_servers(), self.protocol, exclude_set)
+        if server:
+            self._start_interface_name_show(server)
         return server
 
     def _set_proxy(self, proxy: Optional[dict]):
@@ -691,11 +706,16 @@ class Network(PrintError):
 
     async def _close_interface(self, interface):
         if interface:
-            with self.interfaces_lock:
-                if self.interfaces.get(interface.server) == interface:
-                    self.interfaces.pop(interface.server)
-            if interface.server == self.default_server:
-                self.interface = None
+            if isinstance(interface, InterfaceNameShow):
+                with self.interfaces_lock:
+                    if self.interfaces_name_show.get(interface.server) == interface:
+                        self.interfaces_name_show.pop(interface.server)
+            else:
+                with self.interfaces_lock:
+                    if self.interfaces.get(interface.server) == interface:
+                        self.interfaces.pop(interface.server)
+                if interface.server == self.default_server:
+                    self.interface = None
             await interface.close()
 
     @with_recent_servers_lock
@@ -711,10 +731,14 @@ class Network(PrintError):
         '''A connection to server either went down, or was never made.
         We distinguish by whether it is in self.interfaces.'''
         if not interface: return
+
         server = interface.server
-        self.disconnected_servers.add(server)
-        if server == self.default_server:
-            self._set_status('disconnected')
+        if isinstance(interface, InterfaceNameShow):
+            self.disconnected_servers_name_show.add(server)
+        else:
+            self.disconnected_servers.add(server)
+            if server == self.default_server:
+                self._set_status('disconnected')
         await self._close_interface(interface)
         self.trigger_callback('network_updated')
 
@@ -768,7 +792,7 @@ class Network(PrintError):
                 assert server not in self.interfaces_name_show
                 self.interfaces_name_show[server] = interface
         finally:
-            try: self.connecting.remove(server)
+            try: self.connecting_name_show.remove(server)
             except KeyError: pass
 
         self._add_recent_server(server)
@@ -1148,11 +1172,13 @@ class Network(PrintError):
         assert not self.main_taskgroup
         self.main_taskgroup = main_taskgroup = SilentTaskGroup()
         assert not self.interface and not self.interfaces
-        assert not self.connecting and not self.server_queue
+        assert not self.connecting and not self.connecting_name_show and not self.server_queue and not self.server_queue_name_show
         self.print_error('starting network')
         self.disconnected_servers = set([])
+        self.disconnected_servers_name_show = set([])
         self.protocol = deserialize_server(self.default_server)[2]
         self.server_queue = queue.Queue()
+        self.server_queue_name_show = queue.Queue()
         self._set_proxy(deserialize_proxy(self.config.get('proxy')))
         self._set_oneserver(self.config.get('oneserver', False))
         self._start_interface(self.default_server)
@@ -1187,7 +1213,9 @@ class Network(PrintError):
         self.interface = None  # type: Interface
         self.interfaces = {}  # type: Dict[str, Interface]
         self.connecting.clear()
+        self.connecting_name_show.clear()
         self.server_queue = None
+        self.server_queue_name_show = None
         if not full_shutdown:
             self.trigger_callback('network_updated')
 
@@ -1219,14 +1247,19 @@ class Network(PrintError):
             while self.server_queue.qsize() > 0:
                 server = self.server_queue.get()
                 await self.main_taskgroup.spawn(self._run_new_interface(server))
+            while self.server_queue_name_show.qsize() > 0:
+                server = self.server_queue_name_show.get()
                 await self.main_taskgroup.spawn(self._run_new_interface_name_show(server))
         async def maybe_queue_new_interfaces_to_be_launched_later():
             now = time.time()
             for i in range(self.num_server - len(self.interfaces) - len(self.connecting)):
                 self._start_random_interface()
+            for i in range(self.num_server - len(self.interfaces_name_show) - len(self.connecting_name_show)):
+                self._start_random_interface_name_show()
             if now - self.nodes_retry_time > NODES_RETRY_INTERVAL:
                 self.print_error('network: retrying connections')
                 self.disconnected_servers = set([])
+                self.disconnected_servers_name_show = set([])
                 self.nodes_retry_time = now
         async def maintain_main_interface():
             await self._ensure_there_is_a_main_interface()
