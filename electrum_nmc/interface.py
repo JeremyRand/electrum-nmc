@@ -777,6 +777,11 @@ class InterfaceNameShow(Interface):
         return 'name-show/' + self.host
 
     async def run_fetch_blocks(self):
+        if self.ready.cancelled():
+            raise GracefulDisconnect('conn establishment was too slow; *ready* future was cancelled')
+        if self.ready.done():
+            return
+
         # Without this, the Interface will think the connection timed out.
         self.ready.set_result(1)
 
