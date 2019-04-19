@@ -1024,6 +1024,7 @@ class Commands:
 
         # There's only one server left, so try it and if we get
         # NameNotFoundError again, return that error to the user.
+        name_server = servers[0]
         return self.name_show_with_server(identifier, name_server)
 
     def name_show_with_server(self, identifier, server):
