@@ -49,10 +49,15 @@ from .paymentrequest import PR_PAID, PR_UNPAID, PR_UNKNOWN, PR_EXPIRED
 from .synchronizer import Notifier
 from .storage import WalletStorage
 from . import keystore
-from .wallet import Wallet, Imported_Wallet, Abstract_Wallet, create_new_wallet, restore_wallet_from_text
-from .address_synchronizer import TX_HEIGHT_LOCAL
+from .wallet import Wallet, Abstract_Wallet
 from .mnemonic import Mnemonic
 from . import constants
+
+try:
+    from .wallet import create_new_wallet, restore_wallet_from_text
+    from .address_synchronizer import TX_HEIGHT_LOCAL
+except ImportError:
+    pass
 
 if TYPE_CHECKING:
     from .network import Network

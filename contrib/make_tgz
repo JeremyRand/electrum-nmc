@@ -31,11 +31,29 @@ fi
 )
 
 ELECTRUM_VERSION=$(python3 -c "import importlib.util; version_spec = importlib.util.spec_from_file_location('version', 'electrum_nmc/version.py'); version_module = version = importlib.util.module_from_spec(version_spec); version_spec.loader.exec_module(version_module); print(version.ELECTRUM_VERSION)")
+
 mkdir -p tmp
 tar --xz -xf dist/Electrum-NMC-${ELECTRUM_VERSION}.tar.xz --directory=tmp
 rm -r tmp/Electrum-NMC-${ELECTRUM_VERSION}/electrum_nmc/gui/
 rm -r tmp/Electrum-NMC-${ELECTRUM_VERSION}/electrum_nmc/plugins/*/
 rm -r tmp/Electrum-NMC-${ELECTRUM_VERSION}/electrum_nmc/locale/
 rm -r tmp/Electrum-NMC-${ELECTRUM_VERSION}/packages/qdarkstyle/
+rm -r tmp/Electrum-NMC-${ELECTRUM_VERSION}/packages/qrcode/
 tar --xz -cf dist/Electrum-NMC-daemon-${ELECTRUM_VERSION}.tar.xz --directory=tmp Electrum-NMC-${ELECTRUM_VERSION}
+rm -r tmp
+
+mkdir -p tmp
+tar --xz -xf dist/Electrum-NMC-daemon-${ELECTRUM_VERSION}.tar.xz --directory=tmp
+mv tmp/Electrum-NMC-${ELECTRUM_VERSION}/electrum_nmc/null_impl/null_wallet/*.py tmp/Electrum-NMC-${ELECTRUM_VERSION}/electrum_nmc/
+tar --xz -cf dist/Electrum-NMC-daemon-nowallet-${ELECTRUM_VERSION}.tar.xz --directory=tmp Electrum-NMC-${ELECTRUM_VERSION}
+rm -r tmp
+
+mkdir -p tmp
+tar --xz -xf dist/Electrum-NMC-daemon-nowallet-${ELECTRUM_VERSION}.tar.xz --directory=tmp
+rm -r tmp/Electrum-NMC-${ELECTRUM_VERSION}/packages/colorama/
+rm -r tmp/Electrum-NMC-${ELECTRUM_VERSION}/packages/pip/
+rm -r tmp/Electrum-NMC-${ELECTRUM_VERSION}/packages/pkg_resources/
+rm -r tmp/Electrum-NMC-${ELECTRUM_VERSION}/packages/setuptools/
+rm -r tmp/Electrum-NMC-${ELECTRUM_VERSION}/packages/wheel/
+tar --xz -cf dist/Electrum-NMC-daemon-nowallet-nopip-${ELECTRUM_VERSION}.tar.xz --directory=tmp Electrum-NMC-${ELECTRUM_VERSION}
 rm -r tmp

@@ -54,12 +54,15 @@ def check_imports():
         import pyaes
         import ecdsa
         import certifi
-        import qrcode
         import google.protobuf
         import jsonrpclib
         import aiorpcx
     except ImportError as e:
         sys.exit(f"Error: {str(e)}. Try 'sudo python3 -m pip install <module-name>'")
+    try:
+        import qrcode
+    except ImportError as e:
+        print(f"Error: {str(e)}. This is fine for the daemon. If you're using the GUI, try 'sudo python3 -m pip install <module-name>'")
     # the following imports are for pyinstaller
     from google.protobuf import descriptor
     from google.protobuf import message
@@ -78,7 +81,7 @@ from electrum_nmc import util
 from electrum_nmc import constants
 from electrum_nmc import SimpleConfig
 from electrum_nmc.wallet import Wallet
-from electrum_nmc.storage import WalletStorage, get_derivation_used_for_hw_device_encryption
+from electrum_nmc.storage import WalletStorage
 from electrum_nmc.util import print_msg, print_stderr, json_encode, json_decode, UserCancelled
 from electrum_nmc.util import set_verbosity, InvalidPassword
 from electrum_nmc.commands import get_parser, known_commands, Commands, config_variables
@@ -204,6 +207,7 @@ def get_password_for_hw_device_encrypted_storage(plugins):
     # FIXME we use the "first" device, in case of multiple ones
     name, device_info = devices[0]
     plugin = plugins.get_plugin(name)
+    from electrum_nmc.storage import get_derivation_used_for_hw_device_encryption
     derivation = get_derivation_used_for_hw_device_encryption()
     try:
         xpub = plugin.get_xpub(device_info.device.id_, derivation, 'standard', plugin.handler)
