@@ -60,9 +60,9 @@ class NetworkTimeout:
         RELAXED = 45
         MOST_RELAXED = 180
     class Urgent(Generic):
-        NORMAL = 10
-        RELAXED = 20
-        MOST_RELAXED = 60
+        NORMAL = 5
+        RELAXED = 5
+        MOST_RELAXED = 5
 
 class NotificationSession(RPCSession):
 
