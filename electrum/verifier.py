@@ -30,7 +30,7 @@ from .util import bh2u, TxMinedInfo, NetworkJobOnDefaultServer
 from .crypto import sha256d
 from .bitcoin import hash_decode, hash_encode
 from .transaction import Transaction
-from .blockchain import hash_header, hash_merkle_root
+from .blockchain import MerkleVerificationFailure, hash_header, hash_merkle_root
 from .interface import GracefulDisconnect
 from .network import UntrustedServerReturnedError
 from . import constants
@@ -40,10 +40,8 @@ if TYPE_CHECKING:
     from .address_synchronizer import AddressSynchronizer
 
 
-class MerkleVerificationFailure(Exception): pass
 class MissingBlockHeader(MerkleVerificationFailure): pass
 class MerkleRootMismatch(MerkleVerificationFailure): pass
-class InnerNodeOfSpvProofIsValidTx(MerkleVerificationFailure): pass
 
 
 class SPV(NetworkJobOnDefaultServer):
@@ -135,20 +133,6 @@ class SPV(NetworkJobOnDefaultServer):
         self.wallet.add_verified_tx(tx_hash, tx_info)
         #if self.is_up_to_date() and self.wallet.is_up_to_date():
         #    self.wallet.save_verified_tx(write=True)
-
-    @classmethod
-    def _raise_if_valid_tx(cls, raw_tx: str):
-        # If an inner node of the merkle proof is also a valid tx, chances are, this is an attack.
-        # https://lists.linuxfoundation.org/pipermail/bitcoin-dev/2018-June/016105.html
-        # https://lists.linuxfoundation.org/pipermail/bitcoin-dev/attachments/20180609/9f4f5b1f/attachment-0001.pdf
-        # https://bitcoin.stackexchange.com/questions/76121/how-is-the-leaf-node-weakness-in-merkle-trees-exploitable/76122#76122
-        tx = Transaction(raw_tx)
-        try:
-            tx.deserialize()
-        except:
-            pass
-        else:
-            raise InnerNodeOfSpvProofIsValidTx()
 
     async def _maybe_undo_verifications(self):
         old_chain = self.blockchain
