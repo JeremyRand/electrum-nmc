@@ -667,16 +667,3 @@ def verify_proven_chunk(chunk_base_height, chunk_data):
             if prev_header_hash != header.get('prev_block_hash'):
                 raise Exception("prev hash mismatch: %s vs %s" % (prev_header_hash, header.get('prev_block_hash')))
         prev_header_hash = this_header_hash
-
-# Copied from electrumx
-def root_from_proof(hash, branch, index):
-    hash_func = sha256d
-    for elt in branch:
-        if index & 1:
-            hash = hash_func(elt + hash)
-        else:
-            hash = hash_func(hash + elt)
-        index >>= 1
-    if index:
-        raise ValueError('index out of range for branch')
-    return hash

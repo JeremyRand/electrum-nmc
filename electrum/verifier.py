@@ -137,7 +137,7 @@ class SPV(NetworkJobOnDefaultServer):
         #    self.wallet.save_verified_tx(write=True)
 
     @classmethod
-    def hash_merkle_root(cls, merkle_branch: Sequence[str], tx_hash: str, leaf_pos_in_tree: int):
+    def hash_merkle_root(cls, merkle_branch: Sequence[str], tx_hash: str, leaf_pos_in_tree: int, reject_valid_tx: bool=True):
         """Return calculated merkle root."""
         try:
             h = hash_decode(tx_hash)
@@ -153,7 +153,8 @@ class SPV(NetworkJobOnDefaultServer):
                 raise MerkleVerificationFailure('all merkle branch items have to 32 bytes long')
             h = sha256d(item + h) if (index & 1) else sha256d(h + item)
             index >>= 1
-            cls._raise_if_valid_tx(bh2u(h))
+            if reject_valid_tx:
+                cls._raise_if_valid_tx(bh2u(h))
         if index != 0:
             raise MerkleVerificationFailure(f'leaf_pos_in_tree too large for branch')
         return hash_encode(h)
