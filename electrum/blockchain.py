@@ -667,3 +667,25 @@ def verify_proven_chunk(chunk_base_height, chunk_data):
             if prev_header_hash != header.get('prev_block_hash'):
                 raise Exception("prev hash mismatch: %s vs %s" % (prev_header_hash, header.get('prev_block_hash')))
         prev_header_hash = this_header_hash
+
+def hash_merkle_root(merkle_branch: Sequence[str], tx_hash: str, leaf_pos_in_tree: int, reject_valid_tx: bool=True):
+    """Return calculated merkle root."""
+    try:
+        h = hash_decode(tx_hash)
+        merkle_branch_bytes = [hash_decode(item) for item in merkle_branch]
+        leaf_pos_in_tree = int(leaf_pos_in_tree)  # raise if invalid
+    except Exception as e:
+        raise MerkleVerificationFailure(e)
+    if leaf_pos_in_tree < 0:
+        raise MerkleVerificationFailure('leaf_pos_in_tree must be non-negative')
+    index = leaf_pos_in_tree
+    for item in merkle_branch_bytes:
+        if len(item) != 32:
+            raise MerkleVerificationFailure('all merkle branch items have to 32 bytes long')
+        h = sha256d(item + h) if (index & 1) else sha256d(h + item)
+        index >>= 1
+        if reject_valid_tx:
+            cls._raise_if_valid_tx(bh2u(h))
+    if index != 0:
+        raise MerkleVerificationFailure(f'leaf_pos_in_tree too large for branch')
+    return hash_encode(h)

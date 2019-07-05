@@ -51,8 +51,7 @@ from . import pem
 from . import version
 from .bitcoin import hash_encode
 from . import blockchain
-from .blockchain import Blockchain, HeaderChunk
-from .verifier import SPV
+from .blockchain import Blockchain, HeaderChunk, hash_merkle_root
 from . import constants
 from .i18n import _
 from .logging import Logger
@@ -545,7 +544,7 @@ class Interface(Logger):
             raise Exception("Sent unexpected merkle root, expected: {}, got: {}".format(constants.net.CHECKPOINTS['merkle_root'], merkle_root))
 
         header_hash = hash_encode(sha256d(bfh(header)))
-        proven_merkle_root = SPV.hash_merkle_root(merkle_branch, header_hash, header_height, reject_valid_tx=False)
+        proven_merkle_root = hash_merkle_root(merkle_branch, header_hash, header_height, reject_valid_tx=False)
         if proven_merkle_root != expected_merkle_root:
             raise Exception("Sent incorrect merkle branch, expected: {}, proved: {}".format(constants.net.CHECKPOINTS['merkle_root'], proven_merkle_root))
 
